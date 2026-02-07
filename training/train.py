@@ -9,10 +9,47 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from training.features import Preprocessor
+import json
+import os
+from datetime import datetime
 
-# Helper function: evaluate
+REGISTRY_PATH = "models/registry.json"
+
+# ----------------------
+# Helper: Registry
+# ----------------------
+def add_model_to_registry(model_name, model_type, file_path, metrics):
+    """Add trained model entry to registry.json"""
+    if os.path.exists(REGISTRY_PATH):
+        with open(REGISTRY_PATH, "r") as f:
+            registry = json.load(f)
+    else:
+        registry = []
+
+    existing_versions = [m["version"] for m in registry if m["name"] == model_name]
+    version = max(existing_versions, default=0) + 1
+
+    entry = {
+        "name": model_name,
+        "type": model_type,
+        "version": version,
+        "file_path": file_path,
+        "metrics": metrics,
+        "trained_at": datetime.now().isoformat()
+    }
+
+    registry.append(entry)
+
+    with open(REGISTRY_PATH, "w") as f:
+        json.dump(registry, f, indent=4)
+
+    print(f"Model {model_name} v{version} added to registry.")
+
+# ----------------------
+# Helper: Evaluation
+# ----------------------
 def evaluate_model(model, X, y, model_type="sklearn"):
-    if model_type == "sklearn" or model_type == "xgboost":
+    if model_type in ["sklearn", "xgboost"]:
         y_pred_prob = model.predict_proba(X)[:, 1]
         y_pred = model.predict(X)
     elif model_type == "pytorch":
@@ -27,10 +64,11 @@ def evaluate_model(model, X, y, model_type="sklearn"):
     precision = precision_score(y, y_pred)
     recall = recall_score(y, y_pred)
     roc_acu = roc_auc_score(y, y_pred_prob)
-    return {"precision": precision,
-            "recall": recall,
-            "roc_auc": roc_acu}
+    return {"precision": precision, "recall": recall, "roc_auc": roc_acu}
 
+# ----------------------
+# PyTorch MLP
+# ----------------------
 class MLP(nn.Module):
     def __init__(self, input_dim):
         super().__init__()
@@ -42,10 +80,12 @@ class MLP(nn.Module):
             nn.Linear(32, 1),
             nn.Sigmoid()
         )
-        
     def forward(self, x):
         return self.model(x)
-        
+
+# ----------------------
+# Main Training
+# ----------------------
 def main():
     # Set experiment
     experiment_name = "ChurnProject"
@@ -56,13 +96,14 @@ def main():
     df_raw.columns = df_raw.columns.str.strip()
     df_raw["TotalCharges"] = pd.to_numeric(df_raw["TotalCharges"], errors="coerce").fillna(0)
 
-
     # Load preprocessor
     preprocessor = Preprocessor.load("models/preprocessor.pkl")
     X = preprocessor.transform(df_raw)
     y = df_raw["Churn"].apply(lambda x: 1 if x in ["Yes", 1, "Y", "y"] else 0).values
-    
-    # Model 1: Logistic Regression
+
+    # ----------------------
+    # Logistic Regression
+    # ----------------------
     mlflow.start_run(run_name="logistic_regression")
     logreg = LogisticRegression(max_iter=1000)
     logreg.fit(X, y)
@@ -70,11 +111,15 @@ def main():
     mlflow.log_params({"model": "LogisticRegression", "max_iter": 1000})
     for k, v in metrics.items():
         mlflow.log_metric(k, v)
-    joblib.dump(logreg, "models/logreg_model_v1.pkl")
+    logreg_file = "models/logreg_model.pkl"
+    joblib.dump(logreg, logreg_file)
+    add_model_to_registry("logistic_regression", "sklearn", logreg_file, metrics)
     mlflow.end_run()
     print("Logistic Regression done:", metrics)
 
-    # Model 2: XGBoost
+    # ----------------------
+    # XGBoost
+    # ----------------------
     mlflow.start_run(run_name="xgboost")
     xgb_model = xgb.XGBClassifier(
         n_estimators=100,
@@ -88,11 +133,15 @@ def main():
     mlflow.log_params(xgb_model.get_params())
     for k, v in metrics.items():
         mlflow.log_metric(k, v)
-    joblib.dump(xgb_model, "models/xgb_model_v1.pkl")
+    xgb_file = "models/xgb_model.pkl"
+    joblib.dump(xgb_model, xgb_file)
+    add_model_to_registry("xgboost", "xgboost", xgb_file, metrics)
     mlflow.end_run()
     print("XGBoost done:", metrics)
 
-    # Model 3: PyTorch MLP (Multi-Layer-Perceptron)
+    # ----------------------
+    # PyTorch MLP
+    # ----------------------
     mlflow.start_run(run_name="pytorch_mlp")
 
     X_tensor = torch.FloatTensor(X.values)
@@ -101,10 +150,9 @@ def main():
     loader = DataLoader(dataset, batch_size=64, shuffle=True)
 
     mlp_model = MLP(input_dim=X.shape[1])
-    criterion = nn.BCELoss() # Binary Cross-Entropy Loss
+    criterion = nn.BCELoss()
     optimizer = torch.optim.Adam(mlp_model.parameters(), lr=0.001)
 
-    # Training Loop
     for epoch in range(10):
         mlp_model.train()
         for xb, yb in loader:
@@ -115,16 +163,16 @@ def main():
             optimizer.step()
         if epoch % 2 == 0:
             print(f"Epoch {epoch}, loss: {loss.item():.4f}")
-            
+
     metrics = evaluate_model(mlp_model, X, y, model_type="pytorch")
-    mlflow.log_params({
-        "model": "MLP",
-        "epochs": 10,
-        "batch_size": 64,
-        "lr": 0.001
-    })
+    mlflow.log_params({"model": "MLP", "epochs": 10, "batch_size": 64, "lr": 0.001})
     for k, v in metrics.items():
         mlflow.log_metric(k, v)
-    torch.save(mlp_model.state_dict(), "models/mlp_model_v1.pt")
+    mlp_file = "models/mlp_model.pt"
+    torch.save(mlp_model.state_dict(), mlp_file)
+    add_model_to_registry("mlp", "pytorch", mlp_file, metrics)
     mlflow.end_run()
-    print("PyTroch MLP done:", metrics)
+    print("PyTorch MLP done:", metrics)
+
+if __name__ == "__main__":
+    main()

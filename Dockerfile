@@ -1,18 +1,27 @@
-# Use NVIDIA CUDA base image
-FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
+FROM python:3.10-slim
+
+# Prevent python from writing pyc files
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Install Python + pip
-RUN apt-get update && apt-get install -y python3.10 python3-pip
+# System dependencies (needed for xgboost + torch)
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
 
+# Install Python deps
 COPY requirements.txt .
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+RUN pip install --upgrade pip \
+    && pip install -r requirements.txt
 
-# Install PyTorch + torchvision + torchaudio (CUDA 11.8)
-RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-
+# Copy project
 COPY . .
 
+# Expose FastAPI port
+EXPOSE 8000
+
+# Start API
 CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -20,7 +20,7 @@ def health():
 def predict(input_data: ChurnInput):
     # Convert Pydantic to DataFrame
     import pandas as pd
-    df = pd.DataFrame([input_data.dict()])
+    df = pd.DataFrame([input_data.model_dump()])
     
     # Preprocess
     X = preprocessor.transform(df)

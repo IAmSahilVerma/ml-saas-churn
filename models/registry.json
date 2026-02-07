@@ -1,0 +1,19 @@
+{
+    "default": "xgb",
+    "models": {
+        "logreg": {
+            "type": "sklearn",
+            "path": "logreg_model_v1.pkl",
+            "precision": 0.6609,
+            "recall": 0.5548,
+            "roc_auc": 0.8480
+        },
+        "xgb": {
+            "type": "xgboost",
+            "path": "xgb_model_v1.pkl",
+            "precision": 0.7447,
+            "recall": 0.5976,
+            "roc_auc": 0.9068
+        }
+    }
+}
