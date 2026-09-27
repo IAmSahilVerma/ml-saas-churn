@@ -21,7 +21,7 @@ def load_model(model_name: str | None = None):
         model_name = registry["default"]
         
     if model_name not in registry["models"]:
-        raise ValueError(f"Model '{model_name}' no found")
+        raise ValueError(f"Model '{model_name}' not found")
     
     model_info = registry["models"][model_name]
     model_path = os.path.join(MODELS_DIR, model_info["path"])
