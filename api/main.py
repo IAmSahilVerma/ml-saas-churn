@@ -9,7 +9,7 @@ app = FastAPI(title="Churn Prediction API")
 
 preprocessor = load_preprocessor()
 model_type = "xgb"
-model = load_model(model_type=model_type)
+model = load_model(model_name=model_type)
 
 @app.get("/health")
 @app.get("/")
