@@ -20,7 +20,7 @@ class Preprocessor:
         # Fill missing numerics
         df[self.num_features] = df[self.num_features].fillna(0)
         # Fit OneHotEncoder
-        self.ohe = OneHotEncoder(sparse=False, handle_unknown='ignore')
+        self.ohe = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
         df_cat = df[self.cat_features]
         self.ohe.fit(df_cat)
         # Fit scaler
