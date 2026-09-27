@@ -26,7 +26,7 @@ def load_model(model_name: str | None = None):
     model_info = registry["models"][model_name]
     model_path = os.path.join(MODELS_DIR, model_info["path"])
     
-    if model_info["type"] in ["logreg", "xgb"]:
+    if model_info["type"] in ["sklearn", "xgb"]:
         return joblib.load(model_path)
     elif model_info["type"] == "mlp":
         preprocessor = load_preprocessor()
