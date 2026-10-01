@@ -21,12 +21,12 @@ def load_model(model_name: str | None = None):
         model_name = registry["default"]
         
     if model_name not in registry["models"]:
-        raise ValueError(f"Model '{model_name}' no found")
+        raise ValueError(f"Model '{model_name}' not found")
     
     model_info = registry["models"][model_name]
     model_path = os.path.join(MODELS_DIR, model_info["path"])
     
-    if model_info["type"] in ["sklearn", "xgboost"]:
+    if model_info["type"] in ["sklearn", "xgboost", "xgb"]:
         return joblib.load(model_path)
     elif model_info["type"] == "mlp":
         preprocessor = load_preprocessor()

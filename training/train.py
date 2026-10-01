@@ -13,7 +13,7 @@ import json
 import os
 from datetime import datetime
 
-REGISTRY_PATH = "models/registry.json"
+REGISTRY_PATH = "models/training_history.json"
 
 # ----------------------
 # Helper: Registry
