@@ -1,26 +1,20 @@
-import mlflow
-from mlflow.tracking import MlflowClient
+import json
+import os
 
-EXPERIMENT_NAME = "ChurnProject"
+REGISTRY_PATH = os.path.join("models", "registry.json")
+METRIC_KEYS = ("precision", "recall", "f1", "roc_auc")
+
 
 def get_latest_metrics():
-    client = MlflowClient()
-    
-    experiment = client.get_experiment_by_name(EXPERIMENT_NAME)
-    if experiment is None:
-        return {"error": "No MLflow experiment found"}
-    
-    runs = client.search_runs(
-        experiment_ids=[experiment.experiment_id],
-        max_results=1
-    )
-    
-    if len(runs) == 0:
-        return {"error": "No runs found"}
-    
-    run = runs[0]
+    """Return held-out test metrics for the model currently being served."""
+    with open(REGISTRY_PATH) as f:
+        registry = json.load(f)
+
+    model_name = registry["default"]
+    model_info = registry["models"][model_name]
+
     return {
-        "run_id": run.info.run_id,
-        "model_type": run.data.params.get("model", "unknown"),
-        "metrics": run.data.metrics
+        "model": model_name,
+        "metrics": {k: model_info[k] for k in METRIC_KEYS if k in model_info},
+        "evaluated_on": "stratified 20% held-out test set",
     }

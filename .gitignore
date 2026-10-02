@@ -208,3 +208,7 @@ __marimo__/
 mlruns/
 models/*.pkl
 *.pyc
+models/*.pt
+models/training_history.json
+.vscode/
+mlflow.db

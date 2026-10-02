@@ -2,13 +2,13 @@ from fastapi import FastAPI
 import torch
 import numpy as np
 from api.schemas import ChurnInput, ChurnOutput
-from api.model_loader import load_preprocessor, load_model
+from api.model_loader import load_preprocessor, load_model, load_registry
 from api.metrics_loader import get_latest_metrics
 
 app = FastAPI(title="Churn Prediction API")
 
 preprocessor = load_preprocessor()
-model_type = "xgb"
+model_type = load_registry()["default"]
 model = load_model(model_name=model_type)
 
 @app.get("/health")
