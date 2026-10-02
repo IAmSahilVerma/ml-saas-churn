@@ -8,7 +8,9 @@ from api.metrics_loader import get_latest_metrics
 app = FastAPI(title="Churn Prediction API")
 
 preprocessor = load_preprocessor()
+
 model_type = load_registry()["default"]
+
 model = load_model(model_name=model_type)
 
 @app.get("/health")
